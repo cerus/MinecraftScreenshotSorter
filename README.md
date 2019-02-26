@@ -1,4 +1,4 @@
-# MinecraftScreenshotSorter
+# Minecraft Screenshot Sorter
 This is a little fun project that I worked on in about 4-5 hours. It looks through your minecraft screenshots and sorts them in a nice directory structure.
 
 # How to use
