@@ -32,12 +32,12 @@ public class AboutGui extends JFrame {
 
     private void initialize() {
         setTitle("About");
-        setSize(245, 100);
+        setSize(315, 115); // odl width 245, old height 100
         setLayout(null);
         setLocationRelativeTo(null);
         setResizable(false);
 
-        JTextArea area = new JTextArea("This application was made by Cerus.\nGitHub: https://github.com/RealCerus\nDiscord: https://discord.gg/zTDkWcj");
+        JTextArea area = new JTextArea("This application was made by Cerus \n and modified by Mondstation. \nGitHub: https://github.com/RealCerus\nDiscord: https://discord.gg/zTDkWcj");
         area.setBounds(5, 5, 385, 185);
         area.setEditable(false);
         area.setBackground(getBackground());
