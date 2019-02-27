@@ -18,10 +18,16 @@
  *
  */
 
-package de.cerus.minecraftscreenshotsorter;
+package de.cerus.minecraftscreenshotsorter.gui;
+
+import de.cerus.minecraftscreenshotsorter.language.EnglishLanguage;
+import de.cerus.minecraftscreenshotsorter.language.GermanLanguage;
+import de.cerus.minecraftscreenshotsorter.language.Language;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
@@ -29,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -38,8 +45,11 @@ public class MainGui extends JFrame {
     private boolean isSorting = false;
     private Thread thread;
     private JScrollPane scrollPane;
+    private Language language;
+    private JButton runButton;
 
-    public MainGui() {
+    public MainGui(Language language) {
+        this.language = language;
         initialize();
     }
 
@@ -52,14 +62,47 @@ public class MainGui extends JFrame {
         setLocationRelativeTo(null);
 
         JMenuBar menuBar = new JMenuBar();
-        JMenu infoMenu = new JMenu("Info");
-        JMenuItem about = new JMenuItem("About");
-        about.addActionListener(e -> new AboutGui().setVisible(true));
-        infoMenu.add(about);
-        menuBar.add(infoMenu);
-        setJMenuBar(menuBar);
 
-        JLabel screenshotDirectoryLabel = new JLabel("Path to your screenshots:");
+        JMenu infoMenu = new JMenu(language.getInfoMenu());
+        JMenu fileMenu = new JMenu(language.getFileMenu());
+        JMenu languageMenu = new JMenu(language.getLanguage());
+
+        JMenuItem about = new JMenuItem(language.getAbout());
+        JMenuItem saveConfiguration = new JMenuItem(language.getSaveConfigurationMenuItem());
+        JMenuItem loadConfiguration = new JMenuItem(language.getLoadConfigurationMenuItem());
+        JMenuItem englishLanguageItem = new JMenuItem("English");
+        JMenuItem germanLanguageItem = new JMenuItem("Deutsch");
+
+        about.addActionListener(e -> new AboutGui().setVisible(true));
+        englishLanguageItem.addActionListener(e -> {
+            if (isSorting) {
+                JOptionPane.showMessageDialog(null, "", "", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            setVisible(false);
+            dispose();
+            new MainGui(new EnglishLanguage()).setVisible(true);
+        });
+        germanLanguageItem.addActionListener(e -> {
+            if (isSorting) {
+                JOptionPane.showMessageDialog(null, "", "", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            setVisible(false);
+            dispose();
+            new MainGui(new GermanLanguage()).setVisible(true);
+        });
+
+        infoMenu.add(about);
+        languageMenu.add(englishLanguageItem);
+        languageMenu.add(germanLanguageItem);
+        fileMenu.add(languageMenu);
+
+        menuBar.add(infoMenu);
+
+        JLabel screenshotDirectoryLabel = new JLabel(language.getScreenshotPathLabel());
         screenshotDirectoryLabel.setBounds(5, 5, 400, 20);
 
         JTextField screenshotDirectory = new JTextField(System.getenv("APPDATA") + "\\.minecraft\\screenshots");
@@ -77,11 +120,63 @@ public class MainGui extends JFrame {
         });
         screenshotDirectoryChooser.setBounds(400, screenshotDirectory.getY(), 90, 20);
 
-        JLabel outputDirectoryLabel = new JLabel("Path to your output directory:");
+        JLabel outputDirectoryLabel = new JLabel(language.getOutputPathLabel());
         outputDirectoryLabel.setBounds(5, (screenshotDirectory.getY() + screenshotDirectory.getHeight()) + 10, 390, 20);
 
         JTextField outputDirectory = new JTextField(System.getProperty("user.dir"));
         outputDirectory.setBounds(5, (outputDirectoryLabel.getY() + outputDirectoryLabel.getHeight()) + 5, 390, 20);
+
+        loadConfiguration.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            for (FileFilter fileFilter : fileChooser.getChoosableFileFilters())
+                fileChooser.removeChoosableFileFilter(fileFilter);
+            fileChooser.setFileFilter(new FileNameExtensionFilter("MSSCONFIG FILTER", "mssconf"));
+
+            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    Files.readAllLines(fileChooser.getSelectedFile().toPath()).forEach(line -> {
+                        if (line.startsWith("screenshot-dir="))
+                            screenshotDirectory.setText(line.split("=")[1]);
+                        else if (line.startsWith("output-dir="))
+                            outputDirectory.setText(line.split("=")[1]);
+                    });
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                    JOptionPane.showMessageDialog(null, language.format(language.getFileLoadError(), e1.getMessage()), language.getError(), JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        saveConfiguration.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            for (FileFilter fileFilter : fileChooser.getChoosableFileFilters())
+                fileChooser.removeChoosableFileFilter(fileFilter);
+            fileChooser.setFileFilter(new FileNameExtensionFilter("MSSCONFIG FILTER", "mssconf"));
+
+            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                if (!file.getName().endsWith(".mssconf"))
+                    file = new File(file.getAbsolutePath() + ".mssconf");
+
+                System.out.println(file.getAbsolutePath());
+
+                try {
+                    if (file.exists())
+                        file.delete();
+                    Files.write(file.toPath(), Arrays.asList("screenshot-dir=" + screenshotDirectory.getText(), "output-dir=" + outputDirectory.getText()), StandardOpenOption.CREATE_NEW);
+                    JOptionPane.showMessageDialog(null, language.getConfigSaveSuccess(), language.getSuccess(), JOptionPane.INFORMATION_MESSAGE);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                    JOptionPane.showMessageDialog(null, language.getConfigSaveError(), language.getError(), JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        fileMenu.add(saveConfiguration);
+        fileMenu.add(loadConfiguration);
+        menuBar.add(fileMenu);
 
         JButton outputDirectoryChooser = new JButton();
         outputDirectoryChooser.setIcon(new ImageIcon(getClass().getResource("/dir.png")));
@@ -90,12 +185,13 @@ public class MainGui extends JFrame {
             fileChooser.setCurrentDirectory(/*FileSystemView.getFileSystemView().getHomeDirectory()*/new File(System.getProperty("user.dir")));
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION)
+            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
                 outputDirectory.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
         });
         outputDirectoryChooser.setBounds(400, outputDirectory.getY(), 90, 20);
 
-        JButton runButton = new JButton("Sort");
+        runButton = new JButton(language.getSortButton());
         runButton.setBounds(5, (outputDirectoryChooser.getY() + outputDirectoryChooser.getHeight()) + 20, 200, 35);
 
         JProgressBar progressBar = new JProgressBar();
@@ -104,6 +200,7 @@ public class MainGui extends JFrame {
         progressBar.setMaximum(100);
         progressBar.setBounds(210, runButton.getY(), 280, 35);
         progressBar.setStringPainted(true);
+        progressBar.setVisible(false);
 
         JTextArea log = new JTextArea();
         log.append("// Log");
@@ -122,9 +219,10 @@ public class MainGui extends JFrame {
         runButton.addActionListener(e -> {
             if (isSorting) {
                 thread.interrupt();
-                addText(log, "Sorting interrupted");
-                runButton.setText("Sort");
+                addText(log, language.getSortingInterruptedLog());
+                runButton.setText(language.getSortButton());
                 progressBar.setValue(0);
+                progressBar.setVisible(false);
                 isSorting = false;
                 return;
             }
@@ -133,16 +231,16 @@ public class MainGui extends JFrame {
             File outputDir = new File(outputDirectory.getText());
 
             if (!screenshotDir.exists()) {
-                JOptionPane.showMessageDialog(null, "The given screenshot directory does not exist.", "File not found", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, language.getScreenshotDirNotExixtsError(), language.getFileNotFound(), JOptionPane.ERROR_MESSAGE);
                 return;
             }
             if (!outputDir.exists()) {
-                JOptionPane.showMessageDialog(null, "The given output directory does not exist.", "File not found", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, language.getOutputDirNotExixtsError(), language.getFileNotFound(), JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             sort(log, progressBar, screenshotDir, outputDir);
-            runButton.setText("Stop sorting");
+            runButton.setText(language.getStopSortingButton());
         });
 
         add(screenshotDirectoryLabel);
@@ -155,16 +253,19 @@ public class MainGui extends JFrame {
         add(progressBar);
         //add(log);
         add(scrollPane);
+
+        setJMenuBar(menuBar);
     }
 
     private void sort(JTextArea log, JProgressBar progressBar, File screenshotDir, File outputDir) {
         thread = new Thread(() -> {
+            progressBar.setVisible(true);
             isSorting = true;
             progressBar.setValue(0);
-            addText(log, "Sorting started...");
+            addText(log, language.getSortingStartedLog());
 
             List<File> screenshots = Arrays.asList(Objects.requireNonNull(screenshotDir.listFiles()));
-            addText(log, screenshots.size() + " files found");
+            addText(log, language.format(language.getFilesFoundLog(), screenshots.size()));
             progressBar.setMaximum(screenshots.size());
 
             int successes = 0;
@@ -177,45 +278,48 @@ public class MainGui extends JFrame {
                 progressBar.setValue(progressBar.getValue() + 1);
                 String name = screenshot.getName();
                 if (!name.contains("-") || !name.contains("_") || (name.length() - name.replace(".", "").length()) < 2) {
-                    addText(log, "File '" + name + "' does not match the standard screenshot naming, ignoring.");
+                    addText(log, language.format(language.getFileNameNotMatchLog(), name));
                     //progressBar.setMaximum(progressBar.getMaximum()-1);
                     ignored++;
                 } else {
-                    addText(log, "Found file '" + name + "'");
+                    addText(log, language.format(language.getFoundFileLog(), name));
 
                     String year = name.substring(0, name.indexOf("-"));
                     String month = name.substring(name.indexOf("-") + 1, name.indexOf("-") + 3);
                     String day = name.substring(name.indexOf("-") + 4, name.indexOf("-") + 6);
 
-                    File yearDir = new File(outputDir.getAbsolutePath() + "\\Year " + year);
+                    File yearDir = new File(outputDir.getAbsolutePath() + "\\" + language.getYear() + " " + year);
                     if (!yearDir.exists())
-                        addText(log, "Trying to create folder for year " + year + " (success: " + yearDir.mkdirs() + ")");
-                    File monthDir = new File(yearDir.getAbsolutePath() + "\\Month " + month);
+                        addText(log, language.format(language.getTryingCreateFolderYearLog(), year, yearDir.mkdirs()));
+                    File monthDir = new File(yearDir.getAbsolutePath() + "\\" + language.getMonth() + " " + month);
                     if (!monthDir.exists())
-                        addText(log, "Trying to create folder for month " + month + " in year " + year + " (success: " + monthDir.mkdirs() + ")");
-                    File dayDir = new File(monthDir.getAbsolutePath() + "\\Day " + day);
+                        addText(log, language.format(language.getTryingCreateFolderMonthLog(), month, year, monthDir.mkdirs()));
+                    File dayDir = new File(monthDir.getAbsolutePath() + "\\" + language.getDay() + " " + day);
                     if (!dayDir.exists())
-                        addText(log, "Trying to create folder for day " + day + " in year " + year + " and month " + month + " (success: " + dayDir.mkdirs() + ")");
+                        addText(log, language.format(language.getTryingCreateFolderDayLog(), day, year, month, dayDir.mkdirs()));
                     File finalFile = new File(dayDir.getAbsolutePath() + "\\" + screenshot.getName());
                     if (finalFile.exists()) {
-                        addText(log, "File was already sorted in, ignoring it..");
+                        addText(log, language.getFileAlreadySortedLog());
                         ignored++;
                     } else {
                         try {
-                            addText(log, "Trying to copy screenshot...");
+                            addText(log, language.getTryingToCopyLog());
                             Files.copy(screenshot.toPath(), finalFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                            addText(log, "Screenshot was successfully copied!");
+                            addText(log, language.getCopySuccessLog());
                             successes++;
                         } catch (IOException e) {
                             e.printStackTrace();
-                            addText(log, "Could not copy screenshot '" + name + "'");
+                            addText(log, language.format(language.getCopyFailureLog(), name));
                             failures++;
                         }
                     }
                 }
             }
-            addText(log, "Done! Took " + (System.currentTimeMillis() - currentMillis) + " milliseconds (" + ((System.currentTimeMillis() - currentMillis) / 1000) + " seconds) [" + successes + " successes, " + failures + " failures and " + ignored + " ignored files]");
-            isSorting = true;
+            addText(log, language.format(language.getDoneLog(), System.currentTimeMillis() - currentMillis, (System.currentTimeMillis() - currentMillis) / 1000, successes, failures, ignored));
+            progressBar.setValue(0);
+            progressBar.setVisible(false);
+            runButton.setText(language.getSortButton());
+            isSorting = false;
         });
         thread.start();
     }

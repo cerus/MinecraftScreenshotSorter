@@ -18,7 +18,7 @@
  *
  */
 
-package de.cerus.minecraftscreenshotsorter;
+package de.cerus.minecraftscreenshotsorter.gui;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;

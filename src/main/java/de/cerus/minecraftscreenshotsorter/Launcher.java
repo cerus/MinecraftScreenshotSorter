@@ -20,10 +20,13 @@
 
 package de.cerus.minecraftscreenshotsorter;
 
+import de.cerus.minecraftscreenshotsorter.gui.MainGui;
+import de.cerus.minecraftscreenshotsorter.language.EnglishLanguage;
+
 public class Launcher {
 
     public static void main(String[] args) {
-        new MainGui().setVisible(true);
+        new MainGui(new EnglishLanguage()).setVisible(true);
     }
 
 }
