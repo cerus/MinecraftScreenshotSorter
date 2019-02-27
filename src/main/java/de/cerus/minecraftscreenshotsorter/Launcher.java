@@ -20,13 +20,18 @@
 
 package de.cerus.minecraftscreenshotsorter;
 
-import de.cerus.minecraftscreenshotsorter.gui.MainGui;
-import de.cerus.minecraftscreenshotsorter.language.EnglishLanguage;
+import net.mondstation.minecraftscreenshotsorter.ModificationLauncher;
+
+import java.io.IOException;
 
 public class Launcher {
 
     public static void main(String[] args) {
-        new MainGui(new EnglishLanguage()).setVisible(true);
+        try {
+            new ModificationLauncher().launch();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

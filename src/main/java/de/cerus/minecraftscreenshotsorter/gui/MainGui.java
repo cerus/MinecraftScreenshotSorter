@@ -23,6 +23,8 @@ package de.cerus.minecraftscreenshotsorter.gui;
 import de.cerus.minecraftscreenshotsorter.language.EnglishLanguage;
 import de.cerus.minecraftscreenshotsorter.language.GermanLanguage;
 import de.cerus.minecraftscreenshotsorter.language.Language;
+import net.mondstation.minecraftscreenshotsorter.ModificationLauncher;
+import net.mondstation.minecraftscreenshotsorter.modifications.Configuration;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -30,11 +32,11 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.DefaultCaret;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -47,8 +49,11 @@ public class MainGui extends JFrame {
     private Language language;
     private JButton runButton;
 
+    private Configuration configuration;
+
     public MainGui(Language language) {
         this.language = language;
+        this.configuration = new Configuration(language);
         initialize();
     }
 
@@ -57,7 +62,7 @@ public class MainGui extends JFrame {
         setLayout(null);
         setSize(510, 430);
         setResizable(false);
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JMenuBar menuBar = new JMenuBar();
@@ -81,7 +86,8 @@ public class MainGui extends JFrame {
 
             setVisible(false);
             dispose();
-            new MainGui(new EnglishLanguage()).setVisible(true);
+            ModificationLauncher.getInstance().getMainGui().setVisible(true);
+            this.configuration.setLanguage(new EnglishLanguage());
         });
         germanLanguageItem.addActionListener(e -> {
             if (isSorting) {
@@ -91,7 +97,8 @@ public class MainGui extends JFrame {
 
             setVisible(false);
             dispose();
-            new MainGui(new GermanLanguage()).setVisible(true);
+            ModificationLauncher.getInstance().getGermanMainGui().setVisible(true);
+            this.configuration.setLanguage(new GermanLanguage());
         });
 
         infoMenu.add(about);
@@ -114,8 +121,11 @@ public class MainGui extends JFrame {
             fileChooser.setCurrentDirectory(FileSystemView.getFileSystemView().getHomeDirectory());
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION)
+            if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
                 screenshotDirectory.setText(fileChooser.getSelectedFile().getAbsolutePath());
+                // Changed
+                this.configuration.setScreenshotDir(fileChooser.getSelectedFile().getAbsolutePath());
+            }
         });
         screenshotDirectoryChooser.setBounds(400, screenshotDirectory.getY(), 90, 20);
 
@@ -134,17 +144,10 @@ public class MainGui extends JFrame {
             fileChooser.setFileFilter(new FileNameExtensionFilter("MSSCONFIG FILTER", "mssconf"));
 
             if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
-                try {
-                    Files.readAllLines(fileChooser.getSelectedFile().toPath()).forEach(line -> {
-                        if (line.startsWith("screenshot-dir="))
-                            screenshotDirectory.setText(line.split("=")[1]);
-                        else if (line.startsWith("output-dir="))
-                            outputDirectory.setText(line.split("=")[1]);
-                    });
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                    JOptionPane.showMessageDialog(null, language.format(language.getFileLoadError(), e1.getMessage()), language.getError(), JOptionPane.ERROR_MESSAGE);
-                }
+                // Changed
+                this.configuration.load(fileChooser.getSelectedFile());
+                screenshotDirectory.setText(this.configuration.getScreenshotDir());
+                outputDirectory.setText(this.configuration.getOutputDir());
             }
         });
         saveConfiguration.addActionListener(e -> {
@@ -162,15 +165,8 @@ public class MainGui extends JFrame {
 
                 System.out.println(file.getAbsolutePath());
 
-                try {
-                    if (file.exists())
-                        file.delete();
-                    Files.write(file.toPath(), Arrays.asList("screenshot-dir=" + screenshotDirectory.getText(), "output-dir=" + outputDirectory.getText()), StandardOpenOption.CREATE_NEW);
-                    JOptionPane.showMessageDialog(null, language.getConfigSaveSuccess(), language.getSuccess(), JOptionPane.INFORMATION_MESSAGE);
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                    JOptionPane.showMessageDialog(null, language.getConfigSaveError(), language.getError(), JOptionPane.ERROR_MESSAGE);
-                }
+                // Changed
+                this.configuration.save(file);
             }
         });
         fileMenu.add(saveConfiguration);
@@ -186,6 +182,8 @@ public class MainGui extends JFrame {
 
             if (fileChooser.showOpenDialog(fileChooser) == JFileChooser.APPROVE_OPTION) {
                 outputDirectory.setText(fileChooser.getSelectedFile().getAbsolutePath());
+                // Changed
+                this.configuration.setOutputDir(fileChooser.getSelectedFile().getAbsolutePath());
             }
         });
         outputDirectoryChooser.setBounds(400, outputDirectory.getY(), 90, 20);
@@ -201,21 +199,19 @@ public class MainGui extends JFrame {
         progressBar.setStringPainted(true);
         progressBar.setVisible(false);
 
-        JTextArea log = new JTextArea("1\n2\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3");
-        //log.append("// Log");
+        JTextArea log = new JTextArea();
+        log.append("// Log");
         log.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
-        //log.setBorder(new LineBorder(Color.BLACK));
-        log.setBackground(getBackground());
-        log.setEditable(false);
+        log.setBorder(new LineBorder(Color.BLACK));
+        log.setEnabled(false);
         log.setVisible(true);
         DefaultCaret caret = (DefaultCaret) log.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 
         scrollPane = new JScrollPane(log, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setVisible(true);
-        //scrollPane.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
+        scrollPane.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
         scrollPane.setBounds(log.getBounds());
-        scrollPane.setBorder(new LineBorder(getBackground()));
 
         runButton.addActionListener(e -> {
             if (isSorting) {
@@ -256,6 +252,9 @@ public class MainGui extends JFrame {
         add(scrollPane);
 
         setJMenuBar(menuBar);
+
+        this.configuration.setScreenshotDir(screenshotDirectory.getText());
+        this.configuration.setOutputDir(outputDirectory.getText());
     }
 
     private void sort(JTextArea log, JProgressBar progressBar, File screenshotDir, File outputDir) {
@@ -278,28 +277,16 @@ public class MainGui extends JFrame {
                 if (thread.isInterrupted()) return;
                 progressBar.setValue(progressBar.getValue() + 1);
                 String name = screenshot.getName();
-                if (!name.contains("-") || !name.contains("_") || (name.length() - name.replace(".", "").length()) < 2 || (name.length() - name.replace("-", "").length()) < 2) {
+                if (!name.contains("-") || !name.contains("_") || (name.length() - name.replace(".", "").length()) < 2) {
                     addText(log, language.format(language.getFileNameNotMatchLog(), name));
                     //progressBar.setMaximum(progressBar.getMaximum()-1);
                     ignored++;
                 } else {
                     addText(log, language.format(language.getFoundFileLog(), name));
 
-                    String year;
-                    String month;
-                    String day;
-                    try {
-                        year = name.substring(0, name.indexOf("-"));
-                        month = name.substring(name.indexOf("-") + 1, name.indexOf("-") + 3);
-                        day = name.substring(name.indexOf("-") + 4, name.indexOf("-") + 6);
-                    } catch (Exception e) {
-                        addText(log, language.format(language.getFileNameNotMatchLog(), name));
-                        return;
-                    }
-                    if (!year.matches("\\d+") || !month.matches("\\d+") || !day.matches("\\d+")) {
-                        addText(log, language.format(language.getFileNameNotMatchLog(), name));
-                        return;
-                    }
+                    String year = name.substring(0, name.indexOf("-"));
+                    String month = name.substring(name.indexOf("-") + 1, name.indexOf("-") + 3);
+                    String day = name.substring(name.indexOf("-") + 4, name.indexOf("-") + 6);
 
                     File yearDir = new File(outputDir.getAbsolutePath() + "\\" + language.getYear() + " " + year);
                     if (!yearDir.exists())
@@ -341,5 +328,18 @@ public class MainGui extends JFrame {
         System.out.println(text);
         log.append("\n" + text);
         log.setCaretPosition(log.getDocument().getLength());
+    }
+
+    // Changed
+    public Thread getThread() {
+        return thread;
+    }
+
+    public Configuration getConfiguration() {
+        return configuration;
+    }
+
+    public void setConfiguration(final Configuration configuration) {
+        this.configuration = configuration;
     }
 }
