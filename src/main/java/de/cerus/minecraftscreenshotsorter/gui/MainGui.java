@@ -30,7 +30,6 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.DefaultCaret;
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -202,19 +201,21 @@ public class MainGui extends JFrame {
         progressBar.setStringPainted(true);
         progressBar.setVisible(false);
 
-        JTextArea log = new JTextArea();
-        log.append("// Log");
+        JTextArea log = new JTextArea("1\n2\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3\n3");
+        //log.append("// Log");
         log.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
-        log.setBorder(new LineBorder(Color.BLACK));
-        log.setEnabled(false);
+        //log.setBorder(new LineBorder(Color.BLACK));
+        log.setBackground(getBackground());
+        log.setEditable(false);
         log.setVisible(true);
         DefaultCaret caret = (DefaultCaret) log.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 
         scrollPane = new JScrollPane(log, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setVisible(true);
-        scrollPane.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
+        //scrollPane.setBounds(5, (runButton.getY() + runButton.getHeight()) + 5, 485, 200);
         scrollPane.setBounds(log.getBounds());
+        scrollPane.setBorder(new LineBorder(getBackground()));
 
         runButton.addActionListener(e -> {
             if (isSorting) {
@@ -277,16 +278,28 @@ public class MainGui extends JFrame {
                 if (thread.isInterrupted()) return;
                 progressBar.setValue(progressBar.getValue() + 1);
                 String name = screenshot.getName();
-                if (!name.contains("-") || !name.contains("_") || (name.length() - name.replace(".", "").length()) < 2) {
+                if (!name.contains("-") || !name.contains("_") || (name.length() - name.replace(".", "").length()) < 2 || (name.length() - name.replace("-", "").length()) < 2) {
                     addText(log, language.format(language.getFileNameNotMatchLog(), name));
                     //progressBar.setMaximum(progressBar.getMaximum()-1);
                     ignored++;
                 } else {
                     addText(log, language.format(language.getFoundFileLog(), name));
 
-                    String year = name.substring(0, name.indexOf("-"));
-                    String month = name.substring(name.indexOf("-") + 1, name.indexOf("-") + 3);
-                    String day = name.substring(name.indexOf("-") + 4, name.indexOf("-") + 6);
+                    String year;
+                    String month;
+                    String day;
+                    try {
+                        year = name.substring(0, name.indexOf("-"));
+                        month = name.substring(name.indexOf("-") + 1, name.indexOf("-") + 3);
+                        day = name.substring(name.indexOf("-") + 4, name.indexOf("-") + 6);
+                    } catch (Exception e) {
+                        addText(log, language.format(language.getFileNameNotMatchLog(), name));
+                        return;
+                    }
+                    if (!year.matches("\\d+") || !month.matches("\\d+") || !day.matches("\\d+")) {
+                        addText(log, language.format(language.getFileNameNotMatchLog(), name));
+                        return;
+                    }
 
                     File yearDir = new File(outputDir.getAbsolutePath() + "\\" + language.getYear() + " " + year);
                     if (!yearDir.exists())
