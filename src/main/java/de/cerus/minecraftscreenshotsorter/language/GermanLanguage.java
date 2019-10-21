@@ -27,8 +27,8 @@ public class GermanLanguage extends Language {
         setFileMenu("Datei");
         setSaveConfigurationMenuItem("Konfiguration speichern");
         setLoadConfigurationMenuItem("Konfiguration laden");
-        setScreenshotPathLabel("Pfad zu deinem Screenshot Verzeichnis:");
-        setOutputPathLabel("Pfad zu deinem Ausgabe Verzeichnis:");
+        setScreenshotPathLabel("Pfad zu deinem Screenshot-Verzeichnis:");
+        setOutputPathLabel("Pfad zu deinem Ausgabe-Verzeichnis:");
         setError("Fehler");
         setFileLoadError("Konnte Datei nicht laden. ({0})");
         setSuccess("Erfolgreich");
@@ -37,8 +37,8 @@ public class GermanLanguage extends Language {
         setSortButton("Sortieren");
         setStopSortingButton("Stoppe sortieren");
         setSortingInterruptedLog("Sortieren unterbrochen");
-        setScreenshotDirNotExixtsError("Das Screenshot Verzeichnis existiert nicht.");
-        setOutputDirNotExixtsError("Das Screenshot Verzeichnis existiert nicht.");
+        setScreenshotDirNotExixtsError("Das Screenshot-Verzeichnis existiert nicht.");
+        setOutputDirNotExixtsError("Das Ausgabe-Verzeichnis existiert nicht.");
         setSortingStartedLog("Sortieren gestartet...");
         setFilesFoundLog("{0} Dateien gefunden");
         setFileNameNotMatchLog("Dateiname {0} entspricht nicht dem Standard Screenshot Namen, ignoriere Datei.");
@@ -52,7 +52,7 @@ public class GermanLanguage extends Language {
         setFileAlreadySortedLog("Datei wurde bereits einsortiert, ignoriere Datei..");
         setTryingToCopyLog("Versuche Screenshot zu kopieren...");
         setCopySuccessLog("Screenshot wurde erfolgreich kopiert!");
-        setCopyFailureLog("Konnte screenshot {0} nicht kopieren");
+        setCopyFailureLog("Konnte Screenshot {0} nicht kopieren");
         setDoneLog("Fertig! Die Operation hat {0} Millisekunden ({1} Sekunden) gedauert [{2} Erfolge, {3} Misserfolge und {4} ignorierte Dateien]");
         setAbout("Über");
         setLanguage("Sprache");
